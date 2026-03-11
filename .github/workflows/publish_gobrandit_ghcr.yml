@@ -1,0 +1,99 @@
+name: Publish GoBrandIt CE image to GHCR
+
+on:
+  push:
+    branches:
+      - codex/gobrandit-v4.11.1-branding
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Optional pinned image tag to publish (example: v4.11.1-gobrandit.1)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/chatbrandit
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    env:
+      GIT_REF: ${{ github.head_ref || github.ref_name }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Normalize image name
+        run: |
+          echo "IMAGE_NAME_LOWER=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Prepare Community Edition build
+        run: |
+          rm -rf enterprise spec/enterprise
+          if ! grep -q 'CW_EDITION="ce"' docker/Dockerfile; then
+            printf '\nENV CW_EDITION="ce"\n' >> docker/Dockerfile
+          fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: vars
+        env:
+          MANUAL_TAG: ${{ github.event.inputs.image_tag || '' }}
+        run: |
+          SANITIZED_REF=$(echo "$GIT_REF" | sed 's#/#-#g')
+          SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-12)
+
+          BRANCH_TAG="${IMAGE_NAME_LOWER}:${SANITIZED_REF}"
+          SHA_TAG="${IMAGE_NAME_LOWER}:sha-${SHORT_SHA}"
+          TAGS="${BRANCH_TAG},${SHA_TAG}"
+
+          {
+            echo "branch_tag=${BRANCH_TAG}"
+            echo "sha_tag=${SHA_TAG}"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ -n "$MANUAL_TAG" ]; then
+            MANUAL_IMAGE_TAG="${IMAGE_NAME_LOWER}:${MANUAL_TAG}"
+            TAGS="${TAGS},${MANUAL_IMAGE_TAG}"
+            echo "manual_tag=${MANUAL_IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "tags=${TAGS}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.vars.outputs.tags }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=gobrandit-chatwoot-amd64
+          cache-to: type=gha,mode=max,scope=gobrandit-chatwoot-amd64
+
+      - name: Publish summary
+        run: |
+          {
+            echo "Published image tags:"
+            echo "- ${{ steps.vars.outputs.branch_tag }}"
+            echo "- ${{ steps.vars.outputs.sha_tag }}"
+            if [ -n "${{ steps.vars.outputs.manual_tag }}" ]; then
+              echo "- ${{ steps.vars.outputs.manual_tag }}"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
