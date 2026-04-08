@@ -3,6 +3,7 @@ name: Publish GoBrandIt CE image to GHCR
 on:
   push:
     branches:
+      - main
       - codex/gobrandit-v*-branding
       - codex/upgrade-chatwoot-v*
   workflow_dispatch:
