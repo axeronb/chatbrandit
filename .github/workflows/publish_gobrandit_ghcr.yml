@@ -3,11 +3,12 @@ name: Publish GoBrandIt CE image to GHCR
 on:
   push:
     branches:
-      - codex/gobrandit-v4.11.1-branding
+      - codex/gobrandit-v*-branding
+      - codex/upgrade-chatwoot-v*
   workflow_dispatch:
     inputs:
       image_tag:
-        description: "Optional pinned image tag to publish (example: v4.11.1-gobrandit.1)"
+        description: "Optional pinned image tag to publish (example: v4.12.1-gobrandit.1)"
         required: false
         type: string
 
