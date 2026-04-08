@@ -1,0 +1,8 @@
+<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+  <% field.limit_rows.each do |limit_name, limit_label, limit_value| %>
+    <div class="rounded-md border border-slate-200 px-4 py-3">
+      <div class="text-sm font-medium text-slate-700"><%= limit_label %></div>
+      <div class="mt-1 text-sm text-slate-900"><%= limit_value.presence || 'Default' %></div>
+    </div>
+  <% end %>
+</div>

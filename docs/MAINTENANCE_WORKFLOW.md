@@ -46,3 +46,4 @@ Recommended server flow:
 - Keep GoBrandIt customizations small and explicit.
 - Prefer merging upstream releases into `main` instead of rebasing long-lived custom history.
 - Avoid editing production directly when the same change should live in Git.
+- Keep Community Edition admin customizations in `app/` and document them in `docs/CE_ADMIN_ACCOUNT_CONTROLS.md`.
