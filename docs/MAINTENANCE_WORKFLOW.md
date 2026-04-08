@@ -35,10 +35,11 @@ Expected stable image tag:
 
 Recommended server flow:
 
-1. Pull the latest `main` image.
-2. Update the server compose file to use the `:main` tag if it is pinned to an old SHA.
-3. Restart `rails` and `sidekiq`.
-4. Verify `https://chat.gobrandit.app`.
+1. Pull the latest `main` branch on the server checkout.
+2. Build the CE release image with `script/build_ce_release_image.sh`.
+3. Update the server compose file to use the stable `chatbrandit:main` tag if needed.
+4. Restart `rails` and `sidekiq`.
+5. Verify `https://chat.gobrandit.app`.
 
 ## Guardrails
 
