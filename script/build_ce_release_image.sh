@@ -17,8 +17,10 @@ trap cleanup EXIT
 
 echo "Preparing CE build context at $BUILD_CONTEXT"
 rsync -a --delete \
-  --exclude 'enterprise' \
-  --exclude 'spec/enterprise' \
+  --exclude '/enterprise' \
+  --exclude '/enterprise/***' \
+  --exclude '/spec/enterprise' \
+  --exclude '/spec/enterprise/***' \
   --exclude 'node_modules' \
   "$ROOT_DIR/" "$BUILD_CONTEXT/"
 
