@@ -1,0 +1,14 @@
+<div class="field-unit field-unit--string">
+  <%= f.label field.attribute, class: 'field-unit__label' %>
+  <div class="field-unit__field">
+    <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <% field.limit_rows.each do |limit_name, limit_label, limit_value| %>
+        <div>
+          <%= label_tag "account_limits_#{limit_name}", limit_label, class: 'mb-1 block text-sm font-medium text-slate-700' %>
+          <%= number_field_tag "account[limits][#{limit_name}]", limit_value, min: 0, class: 'w-full rounded-md border border-slate-300 px-3 py-2' %>
+        </div>
+      <% end %>
+    </div>
+    <p class="mt-2 text-xs text-slate-500">Leave a field blank to use the installation default.</p>
+  </div>
+</div>

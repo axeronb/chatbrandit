@@ -48,8 +48,8 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
 
   def resource_params
     permitted_params = super
-    permitted_params[:limits] = permitted_params[:limits].to_h.compact
-    permitted_params[:selected_feature_flags] = params[:enabled_features].keys.map(&:to_sym) if params[:enabled_features].present?
+    permitted_params[:limits] = merged_limits(permitted_params[:limits])
+    permitted_params[:selected_feature_flags] = selected_feature_flags if params.key?(:enabled_features)
     permitted_params
   end
 
@@ -77,6 +77,29 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     # rubocop:disable Rails/I18nLocaleTexts
     redirect_back(fallback_location: [namespace, requested_resource], notice: 'Account deletion is in progress.')
     # rubocop:enable Rails/I18nLocaleTexts
+  end
+
+  private
+
+  def merged_limits(limit_params)
+    current_limits = (requested_resource&.limits).to_h.stringify_keys
+    submitted_limits = limit_params.to_h.stringify_keys.slice(*Account.super_admin_editable_limit_keys)
+
+    current_limits.except(*submitted_limits.keys).tap do |merged_limits|
+      submitted_limits.each do |limit_name, limit_value|
+        next if limit_value.blank?
+
+        merged_limits[limit_name] = limit_value.to_i
+      end
+    end
+  end
+
+  def selected_feature_flags
+    enabled_features = params.fetch(:enabled_features, ActionController::Parameters.new).to_unsafe_h
+
+    enabled_features.select do |_feature_name, enabled|
+      ActiveModel::Type::Boolean.new.cast(enabled)
+    end.keys
   end
 end
 

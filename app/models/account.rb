@@ -79,6 +79,13 @@ class Account < ApplicationRecord
     flag_query_mode: :bit_operator,
     check_for_column: false
   }.freeze
+  SUPER_ADMIN_VISIBLE_FEATURE_NAMES = FEATURE_LIST.reject do |feature|
+    feature['chatwoot_internal'] || feature['deprecated']
+  end.pluck('name').freeze
+  SUPER_ADMIN_EDITABLE_LIMIT_KEYS = %w[agents inboxes].freeze
+  SUPER_ADMIN_EDITABLE_FEATURE_NAMES = FEATURE_LIST.reject do |feature|
+    feature['premium'] || feature['chatwoot_internal'] || feature['deprecated']
+  end.pluck('name').freeze
 
   validates :name, presence: true
   validates :domain, length: { maximum: 100 }
@@ -184,11 +191,49 @@ class Account < ApplicationRecord
     super.presence || ENV.fetch('MAILER_SENDER_EMAIL') { GlobalConfig.get('MAILER_SUPPORT_EMAIL')['MAILER_SUPPORT_EMAIL'] }
   end
 
+  def admin_limits
+    self.class.super_admin_editable_limit_keys.index_with do |limit_name|
+      self[:limits]&.dig(limit_name)
+    end
+  end
+
+  def admin_feature_controls
+    self.class.super_admin_editable_feature_names.index_with do |feature_name|
+      feature_enabled?(feature_name)
+    end
+  end
+
+  def selected_feature_flags=(features)
+    editable_feature_names = self.class.super_admin_toggleable_feature_names
+    selected_feature_names = Array(features).filter_map do |feature|
+      feature_name = feature.to_s.delete_prefix('feature_')
+      feature_name if editable_feature_names.include?(feature_name)
+    end
+
+    editable_feature_names.each do |feature_name|
+      send("feature_#{feature_name}=", selected_feature_names.include?(feature_name))
+    end
+  end
+
   def usage_limits
     {
-      agents: ChatwootApp.max_limit.to_i,
-      inboxes: ChatwootApp.max_limit.to_i
+      agents: usage_limit_for('agents'),
+      inboxes: usage_limit_for('inboxes')
     }
+  end
+
+  def self.super_admin_editable_limit_keys
+    SUPER_ADMIN_EDITABLE_LIMIT_KEYS
+  end
+
+  def self.super_admin_editable_feature_names
+    SUPER_ADMIN_EDITABLE_FEATURE_NAMES
+  end
+
+  def self.super_admin_toggleable_feature_names
+    return SUPER_ADMIN_VISIBLE_FEATURE_NAMES if ChatwootApp.enterprise?
+
+    super_admin_editable_feature_names
   end
 
   def locale_english_name
@@ -214,13 +259,34 @@ class Account < ApplicationRecord
   end
 
   def validate_limit_keys
-    # method overridden in enterprise module
+    if self[:limits].blank?
+      self[:limits] = {}
+      return
+    end
+
+    unless self[:limits].is_a?(Hash)
+      errors.add(:limits, ': Invalid data')
+      return
+    end
+
+    self.class.super_admin_editable_limit_keys.each do |limit_name|
+      next unless self[:limits].key?(limit_name)
+
+      integer_value = Integer(self[:limits][limit_name], exception: false)
+      next if integer_value&.>= 0
+
+      errors.add(:limits, "#{limit_name.humanize} must be a non-negative integer")
+    end
   end
 
   def validate_reporting_timezone
     return if reporting_timezone.blank? || ActiveSupport::TimeZone[reporting_timezone].present?
 
     errors.add(:reporting_timezone, I18n.t('errors.account.reporting_timezone.invalid'))
+  end
+
+  def usage_limit_for(limit_name)
+    self[:limits]&.dig(limit_name).presence&.to_i || ChatwootApp.max_limit.to_i
   end
 
   def remove_account_sequences

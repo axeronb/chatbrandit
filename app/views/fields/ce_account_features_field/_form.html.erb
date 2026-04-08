@@ -1,0 +1,14 @@
+<div class="field-unit field-unit--string">
+  <%= f.label field.attribute, class: 'field-unit__label' %>
+  <div class="field-unit__field">
+    <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <% field.feature_rows.each do |feature_name, feature_label, enabled| %>
+        <label class="flex items-center justify-between rounded-md border border-slate-200 px-4 py-3">
+          <span class="pr-4 text-sm text-slate-700"><%= feature_label %></span>
+          <%= check_box 'enabled_features', "feature_#{feature_name}", { checked: enabled, class: 'h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900' }, 'true', 'false' %>
+        </label>
+      <% end %>
+    </div>
+    <p class="mt-2 text-xs text-slate-500">Only Community Edition safe account features are editable here.</p>
+  </div>
+</div>

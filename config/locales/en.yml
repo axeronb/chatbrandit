@@ -481,3 +481,8 @@ en:
       subject: 'Finish setting up %{custom_domain}'
     ssl_status:
       custom_domain_not_configured: 'Custom domain is not configured'
+  helpers:
+    label:
+      account:
+        admin_limits: Limits
+        admin_feature_controls: Feature Controls
