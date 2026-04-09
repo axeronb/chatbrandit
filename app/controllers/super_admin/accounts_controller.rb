@@ -82,7 +82,7 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
   private
 
   def merged_limits(limit_params)
-    current_limits = (requested_resource&.limits).to_h.stringify_keys
+    current_limits = existing_resource_limits
     submitted_limits = limit_params.to_h.stringify_keys.slice(*Account.super_admin_editable_limit_keys)
 
     current_limits.except(*submitted_limits.keys).tap do |merged_limits|
@@ -100,6 +100,12 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
     enabled_features.select do |_feature_name, enabled|
       ActiveModel::Type::Boolean.new.cast(enabled)
     end.keys
+  end
+
+  def existing_resource_limits
+    return {} unless params[:id].present?
+
+    requested_resource.limits.to_h.stringify_keys
   end
 end
 
