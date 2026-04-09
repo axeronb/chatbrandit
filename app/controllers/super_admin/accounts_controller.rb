@@ -33,6 +33,19 @@ class SuperAdmin::AccountsController < SuperAdmin::ApplicationController
   # empty values into nil values. It uses other APIs such as `resource_class`
   # and `dashboard`:
   #
+  def create
+    resource = resource_class.new(resource_params)
+    authorize_resource(resource)
+
+    if resource.save
+      redirect_to super_admin_accounts_path, notice: translate_with_resource('create.success')
+    else
+      render :new,
+             locals: { page: Administrate::Page::Form.new(dashboard, resource) },
+             status: :unprocessable_entity
+    end
+  end
+
   def resource_params
     permitted_params = super
     permitted_params[:limits] = permitted_params[:limits].to_h.compact
