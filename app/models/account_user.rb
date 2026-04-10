@@ -41,6 +41,7 @@ class AccountUser < ApplicationRecord
   after_save :update_presence_in_redis, if: :saved_change_to_availability?
 
   validates :user_id, uniqueness: { scope: :account_id }
+  validate :enforce_account_agent_limit, on: :create
 
   def create_notification_setting
     setting = user.notification_settings.new(account_id: account.id)
@@ -67,6 +68,13 @@ class AccountUser < ApplicationRecord
   end
 
   private
+
+  def enforce_account_agent_limit
+    return unless account.present?
+    return unless account.account_users.count >= account.usage_limits[:agents]
+
+    errors.add(:account_id, 'Account limit exceeded. Please purchase more licenses')
+  end
 
   def notify_creation
     Rails.configuration.dispatcher.dispatch(AGENT_ADDED, Time.zone.now, account: account)
