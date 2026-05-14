@@ -33,8 +33,9 @@ export default {
         this.onClose();
       } catch (error) {
         const message =
-          error.response.data.message ||
-          this.$t('INTEGRATION_SETTINGS.WEBHOOK.EDIT.API.ERROR_MESSAGE');
+          error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          this.$t('INTEGRATION_SETTINGS.WEBHOOK.ADD.API.ERROR_MESSAGE');
         useAlert(message);
       }
     },
